@@ -4,6 +4,8 @@ from typing import Dict, Tuple, List, Callable, Optional, Iterable
 import math
 import random
 import copy
+import matplotlib.pyplot as plt
+
 
 # -------------------------------
 # Types de base
@@ -335,3 +337,31 @@ if __name__ == "__main__":
     cfg = MonteCarloConfig(n_runs=2000, seed=42, perf_map=perf_sum)
     out = monte_carlo(base, atk, pol, cfg)
     print(out.summary)
+
+    # 1. Histogramme des scores système
+    plt.figure(figsize=(10,5))
+    plt.hist(out.baseline_scores, bins=30, alpha=0.6, label='Baseline')
+    plt.hist(out.resilient_scores, bins=30, alpha=0.6, label='Avec résilience')
+    plt.xlabel('Score système')
+    plt.ylabel('Nombre de simulations')
+    plt.title('Distribution des scores Monte Carlo')
+    plt.legend()
+    plt.grid(True)
+    plt.show()
+
+    # 2. Boxplot par nœud (opérabilité)
+    nodes = base.nodes
+    baseline_O_matrix = [list(d.values()) for d in out.baseline_O]
+    resilient_O_matrix = [list(d.values()) for d in out.resilient_O]
+
+    plt.figure(figsize=(12,6))
+    plt.boxplot([ [row[i] for row in baseline_O_matrix] for i in range(len(nodes)) ],
+                positions=[i-0.2 for i in range(len(nodes))], widths=0.35)
+    plt.boxplot([ [row[i] for row in resilient_O_matrix] for i in range(len(nodes)) ],
+                positions=[i+0.2 for i in range(len(nodes))], widths=0.35)
+    plt.xticks(range(len(nodes)), nodes)
+    plt.ylabel('Opérabilité par nœud')
+    plt.title('Comparaison opérabilité par nœud : baseline vs résilience')
+    plt.legend(['Baseline','Résilience'])
+    plt.grid(True)
+    plt.show()
