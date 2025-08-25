@@ -4,7 +4,7 @@ This document explains the arguments, classes, and workflow of the FDNA Monte Ca
 
 ---
 
-## 1️⃣ FDNAState
+## FDNAState
 
 Represents the system state.
 
@@ -18,7 +18,7 @@ Represents the system state.
 
 ---
 
-## 2️⃣ FDNARunResult
+## FDNARunResult
 
 Result of the operability computation.
 
@@ -30,7 +30,7 @@ Result of the operability computation.
 
 ---
 
-## 3️⃣ ResilienceAction
+## ResilienceAction
 
 Elementary action to restore resilience.
 
@@ -41,7 +41,7 @@ Elementary action to restore resilience.
 
 ---
 
-## 4️⃣ ResiliencePolicy
+## ResiliencePolicy
 
 Generates resilience actions based on attacked state.
 
@@ -56,7 +56,7 @@ Generates resilience actions based on attacked state.
 
 ---
 
-## 5️⃣ AttackModel
+## AttackModel
 
 Simulates system perturbation.
 
@@ -69,7 +69,7 @@ Examples: `attack_k_nodes`, `attack_remove_edges`.
 
 ---
 
-## 6️⃣ MonteCarloConfig
+## MonteCarloConfig
 
 Monte Carlo simulation parameters.
 
@@ -81,7 +81,7 @@ Monte Carlo simulation parameters.
 
 ---
 
-## 7️⃣ MonteCarloOutcome
+## MonteCarloOutcome
 
 Global result of a Monte Carlo simulation.
 
@@ -95,7 +95,7 @@ Global result of a Monte Carlo simulation.
 
 ---
 
-## 8️⃣ compute\_operability
+## Compute\_operability
 
 Arguments:
 
@@ -107,27 +107,10 @@ Arguments:
 
 ---
 
-## 9️⃣ Utility Functions
+## Utility Functions
 
 * `apply_actions(state, actions)` → apply `ResilienceAction` list on a `FDNAState`.
 * `attack_k_nodes(k, se_down, weighted)` → disable `k` nodes.
 * `attack_remove_edges(p_remove)` → randomly remove edges.
 
 ---
-
-## 🔄 Workflow Summary
-
-```
-FDNAState --> AttackModel --> (Attacked FDNAState)
-     |                               |
-     |                               +--> compute_operability --> baseline score
-     |
-     +--> ResiliencePolicy --> ResilienceAction --> apply_actions --> compute_operability --> resilient score
-```
-
-* Each Monte Carlo run: generates a random attacked state, applies policy, computes scores.
-* `n_runs` controls how many iterations are performed.
-
----
-
-This document can be included in your GitHub repository as `FDNA_MonteCarlo.md`.
