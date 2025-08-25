@@ -1,24 +1,3 @@
-"""
-FDNA + Résilience — Monte Carlo Framework
------------------------------------------
-
-Ce module implémente :
- 1) Le calcul FDNA de l'opérabilité {O_j} d'un graphe de dépendances
-    (SOD in [0,1], COD in [0,100], SE in [0,100]).
- 2) Un opérateur de résilience générique (politique) qui transforme
-    dynamiquement les paramètres du graphe (ajout d'arêtes de redondance,
-    reconfiguration des SOD/COD, amélioration de SE, etc.).
- 3) Une simulation Monte Carlo d'attaques (noeuds et/ou arêtes) et la
-    comparaison sans/avec mécanisme de résilience.
- 4) Des métriques : operabilités attendues par noeud, score système,
-    gain absolu et relatif de la résilience, attribution par règle.
-
-Références :
-- Guariniello & DeLaurentis (2013), FDNA/DDNA (formules SOD/COD).
-
-AUTEUR: à compléter
-LICENCE: MIT (exemple)
-"""
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Callable, Optional, Iterable
@@ -72,17 +51,6 @@ def compute_operability(
     perf_map: Optional[Callable[[Dict[Node, float]], float]] = None,
     order: Optional[List[Node]] = None,
 ) -> FDNARunResult:
-    """Calcule O_j selon FDNA.
-
-    Equations (adaptées du papier) :
-      - Racines: O_i = SE_i
-      - Pour j avec prédécesseurs i in Pred(j):
-          SOD_Oji = SOD_ij * O_i + (1 - SOD_ij) * SE_j
-          SOD_Oj  = Average_i SOD_Oji
-          COD_Oji = COD_ij + (100 - COD_ij) * (O_i / 100.0)
-          COD_Oj  = min_i COD_Oji
-          O_j     = min(SOD_Oj, COD_Oj)
-    """
     SE = state.SE
     SOD = state.SOD
     COD = state.COD
@@ -148,7 +116,7 @@ class ResilienceAction:
 
 @dataclass
 class ResiliencePolicy:
-    """Politique (règles) qui génère des actions en fonction de l'état attaqué.
+    """Politique qui génère des actions en fonction de l'état attaqué.
        On reçoit un état *déjà affecté par l'attaque* et on renvoie une liste d'actions.
     """
     name: str
@@ -320,9 +288,6 @@ def monte_carlo(
         baseline_scores, resilient_scores, baseline_O, resilient_O, summary
     )
 
-# -------------------------------
-# Utilitaires / Exemples
-# -------------------------------
 
 def example_state() -> FDNAState:
     nodes = ['N1', 'N2', 'N3', 'N4', 'N5']
