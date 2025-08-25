@@ -88,29 +88,29 @@ class System:
                 node.operability = node.effectiveness
             node.operabilityLogs.append(Log(node.operability))
 
-    def propagateOperability(self):
-        max_iter = 100
-        epsilon = 1e-3
-        iteration = 0
-        converged = False
+    # def propagateOperability(self):
+    #     max_iter = 100
+    #     epsilon = 1e-3
+    #     iteration = 0
+    #     converged = False
 
-        self.initRoot()
+    #     self.initRoot()
 
-        while not converged and iteration < max_iter:
-            iteration += 1
-            converged = True  # assume done until change found
+    #     while not converged and iteration < max_iter:
+    #         iteration += 1
+    #         converged = True  # assume done until change found
 
-            for node in self.nodes:
-                if node.root:
-                    continue  # skip roots
+    #         for node in self.nodes:
+    #             if node.root:
+    #                 continue  # skip roots
 
-                new_op = node.computeOperability()
-                if node.operability is None or abs(node.operability - new_op) > epsilon:
-                    node.operability = new_op
-                    node.operabilityLogs.append(Log(node.operability))
-                    converged = False  # still changes happening
+    #             new_op = node.computeOperability()
+    #             if node.operability is None or abs(node.operability - new_op) > epsilon:
+    #                 node.operability = new_op
+    #                 node.operabilityLogs.append(Log(node.operability))
+    #                 converged = False  # still changes happening
 
-        print(f"Converged in {iteration} iterations")
+    #     print(f"Converged in {iteration} iterations")
 
     def computePerformance(self, heuristic):
         for node in self.nodes:

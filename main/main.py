@@ -1,5 +1,5 @@
-from parser.Regexparser import parse_dsl
-from Visualization.Visualizer1 import Visualize
+from ..parser.Regexparser import *
+
 def initRoot(system):
     pass
 
@@ -9,6 +9,7 @@ if __name__ == "__main__":
 
     system = parse_dsl(data)
 
+    print(system)
     # system.propagateOperability()
     # print(system)
 

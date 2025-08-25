@@ -1,11 +1,9 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Tuple, List, Callable, Optional, Iterable
-import math
 import random
 import copy
 import matplotlib.pyplot as plt
-
 
 # -------------------------------
 # Types de base
@@ -329,6 +327,62 @@ def policy_circuit_breaker_and_backup() -> ResiliencePolicy:
 
     return ResiliencePolicy(name='CB+Backup', rules=[rule_scale_sod, rule_backup_edge])
 
+def safer_policy() -> ResiliencePolicy:
+    def conditional_scale_and_backup(state: FDNAState) -> list[ResilienceAction]:
+        acts = []
+        critical_preds = [
+            (i, j) for (i, j) in state.edges
+            if state.SE.get(i, 100) < 60 and state.SOD.get((i, j), 0) > 0.6
+        ]
+        for (i, j) in critical_preds:
+            acts.append(ResilienceAction('scale_sod', {'factor': 0.85}))
+
+        preds_N5_low = any(
+            (i in ['N2', 'N3', 'N4']) and j == 'N5' for (i, j) in critical_preds
+        )
+        if preds_N5_low:
+            acts.append(ResilienceAction('add_edge', {
+                'i': 'N1',
+                'j': 'N5',
+                'sod': 0.4,
+                'cod': 85
+            }))
+        return acts
+
+    return ResiliencePolicy('Safer', rules=[conditional_scale_and_backup])
+
+def no_regret_policy(base_policy: ResiliencePolicy, perf_map: Callable[[dict], float]) -> ResiliencePolicy:
+    def wrapped_rule(state: FDNAState) -> list[ResilienceAction]:
+        actions: List[ResilienceAction] = []
+        for rule in base_policy.rules:
+            actions.extend(rule(state))
+
+        # Score avant
+        base_result = compute_operability(state, perf_map)
+        base_score = base_result.score
+
+        # Simulation avec toutes les actions
+        trial_state = apply_actions(state, actions)
+        trial_result = compute_operability(trial_state, perf_map)
+        trial_score = trial_result.score
+
+        if trial_score >= base_score:
+            return actions
+
+        # Sinon, on garde uniquement les actions bénéfiques
+        beneficial: List[ResilienceAction] = []
+        temp_state = state.copy()
+        for act in actions:
+            candidate_state = apply_actions(temp_state, [act])
+            s_cand = compute_operability(candidate_state, perf_map).score
+            s_kept = compute_operability(temp_state, perf_map).score
+            if s_cand >= s_kept:
+                beneficial.append(act)
+                temp_state = candidate_state
+        return beneficial
+
+    return ResiliencePolicy(f"NoRegret({base_policy.name})", rules=[wrapped_rule])
+
 def aggressive_policy() -> ResiliencePolicy:
     def scale_sod_rule(state: FDNAState) -> list[ResilienceAction]:
         return [ResilienceAction('scale_sod', {'factor': 0.7})]  # more reduction
@@ -338,7 +392,7 @@ def aggressive_policy() -> ResiliencePolicy:
         # Add backup edges from N1 to all downstream nodes if predecessors are low
         for n in ['N2','N3','N4']:
             if state.SE.get(n, 100) < 50:
-                acts.append(ResilienceAction('add_edge', {'i':'N1','j':'N5','sod':0.5,'cod':60}))
+                acts.append(ResilienceAction('add_edge', {'i':'N1','j':'N5','sod':0.5,'cod':60.0}))
         return acts
 
     return ResiliencePolicy('Aggressive', rules=[scale_sod_rule, backup_edge_rule])
@@ -346,16 +400,35 @@ def aggressive_policy() -> ResiliencePolicy:
 
 if __name__ == "__main__":
     base = example_state()
-    atk = attack_k_nodes(k=2, se_down=0.0) #severity of attack
-    pol = aggressive_policy()
+    atk = attack_k_nodes(k=2, se_down=0.0) # severity of attack
+
+    # choose policy: safer wrapped with no-regret
+    safer = safer_policy()
+    pol = no_regret_policy(safer, perf_map=lambda O: sum(O.values()))
+
     cfg = MonteCarloConfig(n_runs=2000, seed=42, perf_map=perf_sum)
     out = monte_carlo(base, atk, pol, cfg)
     print(out.summary)
 
+    # diagnostic problem
+    gains = [r - b for r, b in zip(out.resilient_scores, out.baseline_scores)]
+    mean_gain = sum(gains)/len(gains)
+    neg_ratio = sum(1 for g in gains if g < 0) / len(gains)
+    print(f"Gain moyen: {mean_gain:.2f}  |  % runs négatifs: {100*neg_ratio:.1f}%")
+
+    # Gain distribution
+    plt.figure(figsize=(8,5))
+    plt.hist(gains, bins=60)
+    plt.xlabel('Gain (resilient - baseline)')
+    plt.ylabel('Frequency')
+    plt.title('Distribution des gains par simulation')
+    plt.grid(True)
+    plt.show()
+
     # 1. Histogramme des scores système
     plt.figure(figsize=(10,5))
-    plt.hist(out.baseline_scores, bins=30, alpha=0.6, label='Baseline')
-    plt.hist(out.resilient_scores, bins=30, alpha=0.6, label='Avec résilience')
+    plt.hist(out.baseline_scores, bins=30, alpha=0.6, label='Baseline', color='skyblue')
+    plt.hist(out.resilient_scores, bins=30, alpha=0.6, label='Avec résilience', color='lightgreen')
     plt.xlabel('Score système')
     plt.ylabel('Nombre de simulations')
     plt.title('Distribution des scores Monte Carlo')
@@ -367,9 +440,9 @@ if __name__ == "__main__":
     nodes = base.nodes
     n_nodes = len(nodes)
 
-    # Extraire les opérabilités par nœud
-    baseline_O_matrix = [ [row[n] for row in out.baseline_O] for n in nodes ]
-    resilient_O_matrix = [ [row[n] for row in out.resilient_O] for n in nodes ]
+    # Extraire les opérabilités par nœud (par node name)
+    baseline_O_matrix = [ [o[n] for o in out.baseline_O] for n in nodes ]
+    resilient_O_matrix = [ [o[n] for o in out.resilient_O] for n in nodes ]
 
     plt.figure(figsize=(12,6))
 
@@ -390,3 +463,13 @@ if __name__ == "__main__":
     # Légende manuelle
     plt.legend([b1["boxes"][0], b2["boxes"][0]], ['Baseline','Résilience'])
     plt.show()
+
+    # 3. Delta moyen par nœud (diagnostic)
+    import numpy as np
+    delta_node_mean = {
+        n: np.mean([r[n] - b[n] for b, r in zip(out.baseline_O, out.resilient_O)])
+        for n in nodes
+    }
+    print("Delta moyen par nœud (resilient - baseline):")
+    for n, v in delta_node_mean.items():
+        print(f"  {n}: {v:.3f}")
