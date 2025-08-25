@@ -346,7 +346,7 @@ def aggressive_policy() -> ResiliencePolicy:
 
 if __name__ == "__main__":
     base = example_state()
-    atk = attack_k_nodes(k=1, se_down=0.0)
+    atk = attack_k_nodes(k=2, se_down=0.0) #severity of attack
     pol = aggressive_policy()
     cfg = MonteCarloConfig(n_runs=2000, seed=42, perf_map=perf_sum)
     out = monte_carlo(base, atk, pol, cfg)
@@ -365,17 +365,28 @@ if __name__ == "__main__":
 
     # 2. Boxplot par nœud (opérabilité)
     nodes = base.nodes
-    baseline_O_matrix = [list(d.values()) for d in out.baseline_O]
-    resilient_O_matrix = [list(d.values()) for d in out.resilient_O]
+    n_nodes = len(nodes)
+
+    # Extraire les opérabilités par nœud
+    baseline_O_matrix = [ [row[n] for row in out.baseline_O] for n in nodes ]
+    resilient_O_matrix = [ [row[n] for row in out.resilient_O] for n in nodes ]
 
     plt.figure(figsize=(12,6))
-    plt.boxplot([ [row[i] for row in baseline_O_matrix] for i in range(len(nodes)) ],
-                positions=[i-0.2 for i in range(len(nodes))], widths=0.35)
-    plt.boxplot([ [row[i] for row in resilient_O_matrix] for i in range(len(nodes)) ],
-                positions=[i+0.2 for i in range(len(nodes))], widths=0.35)
-    plt.xticks(range(len(nodes)), nodes)
+
+    # Boxplots décalés pour chaque nœud
+    positions_base = [i - 0.2 for i in range(n_nodes)]
+    positions_res = [i + 0.2 for i in range(n_nodes)]
+
+    b1 = plt.boxplot(baseline_O_matrix, positions=positions_base, widths=0.35,
+                    patch_artist=True, boxprops=dict(facecolor='skyblue'))
+    b2 = plt.boxplot(resilient_O_matrix, positions=positions_res, widths=0.35,
+                    patch_artist=True, boxprops=dict(facecolor='lightgreen'))
+
+    plt.xticks(range(n_nodes), nodes)
     plt.ylabel('Opérabilité par nœud')
     plt.title('Comparaison opérabilité par nœud : baseline vs résilience')
-    plt.legend(['Baseline','Résilience'])
     plt.grid(True)
+
+    # Légende manuelle
+    plt.legend([b1["boxes"][0], b2["boxes"][0]], ['Baseline','Résilience'])
     plt.show()
