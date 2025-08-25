@@ -329,11 +329,25 @@ def policy_circuit_breaker_and_backup() -> ResiliencePolicy:
 
     return ResiliencePolicy(name='CB+Backup', rules=[rule_scale_sod, rule_backup_edge])
 
+def aggressive_policy() -> ResiliencePolicy:
+    def scale_sod_rule(state: FDNAState) -> list[ResilienceAction]:
+        return [ResilienceAction('scale_sod', {'factor': 0.7})]  # more reduction
+
+    def backup_edge_rule(state: FDNAState) -> list[ResilienceAction]:
+        acts = []
+        # Add backup edges from N1 to all downstream nodes if predecessors are low
+        for n in ['N2','N3','N4']:
+            if state.SE.get(n, 100) < 50:
+                acts.append(ResilienceAction('add_edge', {'i':'N1','j':'N5','sod':0.5,'cod':60}))
+        return acts
+
+    return ResiliencePolicy('Aggressive', rules=[scale_sod_rule, backup_edge_rule])
+
 
 if __name__ == "__main__":
     base = example_state()
     atk = attack_k_nodes(k=1, se_down=0.0)
-    pol = policy_circuit_breaker_and_backup()
+    pol = aggressive_policy()
     cfg = MonteCarloConfig(n_runs=2000, seed=42, perf_map=perf_sum)
     out = monte_carlo(base, atk, pol, cfg)
     print(out.summary)
