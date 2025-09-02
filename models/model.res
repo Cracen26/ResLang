@@ -1,12 +1,12 @@
 system DecentralizedSystem { 
     components {
-        Boat1 [SE=100, criticality=0.9];
-        Boat2 [SE=100, criticality=0.45];
-        Boat3 [SE=100, criticality=0.45];
-        Boat4 [SE=100, criticality=0.9];
-        Boat5 [SE=100, criticality=0.45];
-    }
-
+        GPS [SE=100];
+        Boat1 [SE=100];
+        Boat2 [SE=100];
+        Boat3 [SE=100];
+        Boat4 [SE=100];
+        Boat5 [SE=100]; 
+    
     dependencies {
         Boat1 -> Boat2 [alpha=0.5, beta=50];
         Boat1 -> Boat3 [alpha=1, beta=0];
@@ -17,11 +17,21 @@ system DecentralizedSystem {
 }
 
 context C0 { 
-    hazards GPS {
-       target=[D1,D4], 
-       latency=10;
+    hazard GPSJamming {
+       target=[GPS], 
+       impact=0.7
+    }
+    performance {
+        Function 'default'
+    } 
+}
+
+resilience R0 { 
+    hazards GPSJamming {
+       target=[GPS], 
+       impact=0.7
     }
     performances {
-        Function 'Relu'
+        Function 'default'
     } 
 }

@@ -4,7 +4,8 @@ from typing import Dict, Tuple, List, Callable, Optional, Iterable
 import random
 import copy
 import matplotlib.pyplot as plt
-
+from scipy.stats import gaussian_kde
+import numpy as np
 # -------------------------------
 # Types de base
 # -------------------------------
@@ -283,7 +284,7 @@ def monte_carlo(
         'gain_abs': gain_abs,
         'gain_rel_percent': gain_rel,
     }
-
+    
     return MonteCarloOutcome(
         baseline_scores, resilient_scores, baseline_O, resilient_O, summary
     )
@@ -406,15 +407,16 @@ if __name__ == "__main__":
     safer = safer_policy()
     pol = no_regret_policy(safer, perf_map=lambda O: sum(O.values()))
 
-    cfg = MonteCarloConfig(n_runs=2000, seed=42, perf_map=perf_sum)
+    cfg = MonteCarloConfig(n_runs=10000, seed=42, perf_map=perf_sum)
     out = monte_carlo(base, atk, pol, cfg)
-    print(out.summary)
+    print(out)
+    # print(out.summary)
 
     # diagnostic problem
-    gains = [r - b for r, b in zip(out.resilient_scores, out.baseline_scores)]
-    mean_gain = sum(gains)/len(gains)
-    neg_ratio = sum(1 for g in gains if g < 0) / len(gains)
-    print(f"Gain moyen: {mean_gain:.2f}  |  % runs négatifs: {100*neg_ratio:.1f}%")
+    # gains = [r - b for r, b in zip(out.resilient_scores, out.baseline_scores)]
+    # mean_gain = sum(gains)/len(gains)
+    # neg_ratio = sum(1 for g in gains if g < 0) / len(gains)
+    # print(f"Gain moyen: {mean_gain:.2f}  |  % runs négatifs: {100*neg_ratio:.1f}%")
 
     # Gain distribution
     plt.figure(figsize=(8,5))
@@ -463,13 +465,3 @@ if __name__ == "__main__":
     # Légende manuelle
     plt.legend([b1["boxes"][0], b2["boxes"][0]], ['Baseline','Résilience'])
     plt.show()
-
-    # 3. Delta moyen par nœud (diagnostic)
-    import numpy as np
-    delta_node_mean = {
-        n: np.mean([r[n] - b[n] for b, r in zip(out.baseline_O, out.resilient_O)])
-        for n in nodes
-    }
-    print("Delta moyen par nœud (resilient - baseline):")
-    for n, v in delta_node_mean.items():
-        print(f"  {n}: {v:.3f}")
