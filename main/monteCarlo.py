@@ -413,10 +413,10 @@ if __name__ == "__main__":
     # print(out.summary)
 
     # diagnostic problem
-    # gains = [r - b for r, b in zip(out.resilient_scores, out.baseline_scores)]
-    # mean_gain = sum(gains)/len(gains)
-    # neg_ratio = sum(1 for g in gains if g < 0) / len(gains)
-    # print(f"Gain moyen: {mean_gain:.2f}  |  % runs négatifs: {100*neg_ratio:.1f}%")
+    gains = [r - b for r, b in zip(out.resilient_scores, out.baseline_scores)]
+    mean_gain = sum(gains)/len(gains)
+    neg_ratio = sum(1 for g in gains if g < 0) / len(gains)
+    print(f"Gain moyen: {mean_gain:.2f}  |  % runs négatifs: {100*neg_ratio:.1f}%")
 
     # Gain distribution
     plt.figure(figsize=(8,5))
